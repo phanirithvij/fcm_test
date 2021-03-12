@@ -31,11 +31,21 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Create a [AndroidNotificationChannel] for heads up notifications
-const AndroidNotificationChannel channel = AndroidNotificationChannel(
+const AndroidNotificationChannel highImpChannel = AndroidNotificationChannel(
   'high_importance_channel', // id
   'High Importance Notifications', // title
   'This channel is used for important notifications.', // description
   importance: Importance.high,
+  playSound: true,
+);
+
+/// Create a [AndroidNotificationChannel] for heads up notifications
+const AndroidNotificationChannel updatesChannel = AndroidNotificationChannel(
+  'updates_channel', // id
+  'Location updates Notifications', // title
+  'This channel is used for updating the notification.', // description
+  importance: Importance.defaultImportance,
+  playSound: false,
 );
 
 /// Initialize the [FlutterLocalNotificationsPlugin] package.
@@ -56,14 +66,19 @@ Future<void> main() async {
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
+      ?.createNotificationChannel(highImpChannel);
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(updatesChannel);
 
   /// Update the iOS foreground notification presentation options to allow
   /// heads up notifications.
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
     alert: true,
     badge: true,
-    sound: true,
+    sound: false,
   );
 
   runApp(MessagingExampleApp());
@@ -127,17 +142,20 @@ class _Application extends State<Application> {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       RemoteNotification notification = message.notification;
       AndroidNotification android = message.notification?.android;
+      print(int.parse(message.data['tag']) ?? notification.hashCode);
 
       if (notification != null && android != null) {
         flutterLocalNotificationsPlugin.show(
-            notification.hashCode,
+            int.parse(message.data['tag']) ?? notification.hashCode,
             notification.title,
             notification.body,
             NotificationDetails(
               android: AndroidNotificationDetails(
-                channel.id,
-                channel.name,
-                channel.description,
+                highImpChannel.id,
+                highImpChannel.name,
+                highImpChannel.description,
+                playSound: false,
+                ongoing: true,
                 // TODO add a proper drawable resource to android, for now using
                 //      one that already exists in example app.
                 icon: 'launch_background',
@@ -161,7 +179,7 @@ class _Application extends State<Application> {
 
     try {
       await http.post(
-        Uri.parse('https://api.rnfirebase.io/messaging/send'),
+        Uri.parse('http://192.168.0.101:3100/send'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },
