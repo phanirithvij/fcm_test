@@ -44,8 +44,10 @@ const AndroidNotificationChannel updatesChannel = AndroidNotificationChannel(
   'updates_channel', // id
   'Location updates Notifications', // title
   'This channel is used for updating the notification.', // description
-  importance: Importance.defaultImportance,
+  importance: Importance.high,
+  enableVibration: false,
   playSound: false,
+  // playSound: true,
 );
 
 /// Initialize the [FlutterLocalNotificationsPlugin] package.
@@ -78,7 +80,7 @@ Future<void> main() async {
   await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
     alert: true,
     badge: true,
-    sound: false,
+    sound: true,
   );
 
   runApp(MessagingExampleApp());
@@ -142,20 +144,36 @@ class _Application extends State<Application> {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       RemoteNotification notification = message.notification;
       AndroidNotification android = message.notification?.android;
-      print(int.parse(message.data['tag']) ?? notification.hashCode);
+
+      final notificationID =
+          int.parse(message.data['tag']) ?? notification.hashCode;
+      print(notificationID);
+      var _channel = updatesChannel;
+      var isHighImpChanel = message.data['channelID'] != "updates_channel";
+      // TODO switch case for even more channels
+      if (isHighImpChanel) {
+        _channel = highImpChannel;
+      }
+
+      // flutterLocalNotificationsPlugin.cancel(notificationID);
 
       if (notification != null && android != null) {
         flutterLocalNotificationsPlugin.show(
-            int.parse(message.data['tag']) ?? notification.hashCode,
+            notificationID,
             notification.title,
             notification.body,
             NotificationDetails(
               android: AndroidNotificationDetails(
-                highImpChannel.id,
-                highImpChannel.name,
-                highImpChannel.description,
-                playSound: false,
-                ongoing: true,
+                _channel.id,
+                _channel.name,
+                _channel.description,
+                playSound: isHighImpChanel,
+                // The following option can be used for the alert only once functionality
+                // but if we use two different notification channels we can have
+                // all the update notifications to be silent whereas if we use onlyAlertOnce
+                // if the user dismisses the notification the new one will have sound too
+                // onlyAlertOnce: true,
+                // ongoing: true,
                 // TODO add a proper drawable resource to android, for now using
                 //      one that already exists in example app.
                 icon: 'launch_background',
