@@ -197,6 +197,7 @@ class _Application extends State<Application> {
 
     try {
       await http.post(
+        // TODO use the backend server url
         Uri.parse('http://192.168.0.101:3100/send'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
